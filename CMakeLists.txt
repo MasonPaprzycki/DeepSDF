@@ -12,10 +12,6 @@ set(EIGEN_BUILD_TESTING OFF CACHE BOOL "" FORCE)
 set(EIGEN_BUILD_DOC OFF CACHE BOOL "" FORCE)
 set(EIGEN_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
-set(NANOFLANN_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(NANOFLANN_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(NANOFLANN_INSTALL OFF CACHE BOOL "" FORCE)
-
 # --- CLI11 ---
 FetchContent_Declare(
   CLI11
@@ -33,19 +29,8 @@ FetchContent_Declare(
 FetchContent_Populate(eigen)
 add_subdirectory(${eigen_SOURCE_DIR} ${eigen_BINARY_DIR})
 
-# --- nanoflann ---
-FetchContent_Declare(
-  nanoflann
-  GIT_REPOSITORY https://github.com/jlblancoc/nanoflann.git
-  GIT_TAG v1.5.5
-)
-add_subdirectory(third-party/zlib/cnpy/nanoflann-src)
 
-# --- CNPY ---
-add_subdirectory(third-party/zlib/cnpy)
-
-include(ExternalProject)
-
+# --- ZLIB ---
 ExternalProject_Add(
     zlib_proj
     PREFIX ${CMAKE_BINARY_DIR}/zlib
@@ -57,14 +42,39 @@ ExternalProject_Add(
     UPDATE_COMMAND ""
 )
 
-# Set variables so cnpy can find it
-
 set(ZLIB_INCLUDE_DIR "${CMAKE_BINARY_DIR}/zlib-install/include" CACHE PATH "ZLIB include")
 set(ZLIB_LIBRARY "${CMAKE_BINARY_DIR}/zlib-install/lib/zlibstatic.lib" CACHE FILEPATH "ZLIB lib")
 
-# Make cnpy depend on zlib build
+# --- cnpy depends on zlib ---
+add_subdirectory(third-party/zlib/cnpy)
 add_dependencies(cnpy zlib_proj)
 
+
+
+include(FetchContent)
+
+FetchContent_Declare(
+    nanoflann
+    GIT_REPOSITORY https://github.com/YourUsername/nanoflann.git
+    GIT_TAG v1.5.5  # or your branch/commit
+)
+
+FetchContent_GetProperties(nanoflann)
+if(NOT nanoflann_POPULATED)
+    # Populate the repository WITHOUT building it
+    FetchContent_Populate(
+        nanoflann
+        # Explicitly disable any attempt to build
+        SOURCE_DIR ${nanoflann_SOURCE_DIR}
+        BINARY_DIR ${nanoflann_BINARY_DIR}
+    )
+endif()
+
+# Create a header-only INTERFACE target
+add_library(nanoflann INTERFACE)
+
+# Set the include path to where your headers actually live
+target_include_directories(nanoflann INTERFACE ${nanoflann_SOURCE_DIR})
 
 
 # --- Pangolin via ExternalProject ---
@@ -81,16 +91,13 @@ if(WITH_PANGOLIN)
             -DPANGOLIN_USE_GLEW=ON
             -DPANGOLIN_BUILD_EXAMPLES=OFF
             -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/pangolin-install
-        UPDATE_COMMAND ""  # avoid auto-update during build
+        UPDATE_COMMAND ""
     )
 
-    # Include the installed Pangolin headers and libraries
     include_directories(${CMAKE_BINARY_DIR}/pangolin-install/include)
     link_directories(${CMAKE_BINARY_DIR}/pangolin-install/lib)
 
-    set(PANGOLIN_LIB pangolin)  # library name for linking
-
-    # Make executables depend on Pangolin build
+    set(PANGOLIN_LIB pangolin)
     set(PANGOLIN_DEP pangolin_proj)
 endif()
 
@@ -103,7 +110,7 @@ set(SOURCES
 # --- deepSDF executable ---
 file(GLOB SRC_FILES src/*.cpp)
 add_executable(deepSDF ${SRC_FILES})
-target_link_libraries(deepSDF PRIVATE CLI11::CLI11 Eigen3::Eigen nanoflann::nanoflann cnpy)
+target_link_libraries(deepSDF PRIVATE CLI11::CLI11 Eigen3::Eigen nanoflann cnpy)
 if(WITH_PANGOLIN)
     add_dependencies(deepSDF ${PANGOLIN_DEP})
     target_link_libraries(deepSDF PRIVATE ${PANGOLIN_LIB})
@@ -113,7 +120,7 @@ set_target_properties(deepSDF PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOU
 # --- PreprocessMesh ---
 add_executable(PreprocessMesh src/PreprocessMesh.cpp ${SOURCES})
 target_include_directories(PreprocessMesh PRIVATE third-party/zlib/cnpy)
-target_link_libraries(PreprocessMesh PRIVATE CLI11::CLI11 Eigen3::Eigen cnpy)
+target_link_libraries(PreprocessMesh PRIVATE CLI11::CLI11 Eigen3::Eigen cnpy nanoflann)
 if(WITH_PANGOLIN)
     add_dependencies(PreprocessMesh ${PANGOLIN_DEP})
     target_link_libraries(PreprocessMesh PRIVATE ${PANGOLIN_LIB})
@@ -123,7 +130,7 @@ set_target_properties(PreprocessMesh PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJ
 # --- SampleVisibleMeshSurface ---
 add_executable(SampleVisibleMeshSurface src/SampleVisibleMeshSurface.cpp ${SOURCES})
 target_include_directories(SampleVisibleMeshSurface PRIVATE third-party/zlib/cnpy)
-target_link_libraries(SampleVisibleMeshSurface PRIVATE CLI11::CLI11 Eigen3::Eigen nanoflann::nanoflann cnpy)
+target_link_libraries(SampleVisibleMeshSurface PRIVATE CLI11::CLI11 Eigen3::Eigen nanoflann cnpy)
 if(WITH_PANGOLIN)
     add_dependencies(SampleVisibleMeshSurface ${PANGOLIN_DEP})
     target_link_libraries(SampleVisibleMeshSurface PRIVATE ${PANGOLIN_LIB})
