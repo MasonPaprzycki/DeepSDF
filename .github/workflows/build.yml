@@ -28,11 +28,17 @@ jobs:
       if: runner.os == 'macOS'
       shell: bash
       run: |
+        # Install brew dependencies
         brew update
         brew install glew zlib
+
+        # Create and activate Python virtual environment
         python3 -m venv venv
         source venv/bin/activate
-        python -m pip install --upgrade pip setuptools wheel numpy matplotlib tqdm
+
+        # Upgrade pip and install Python packages inside venv
+        python -m pip install --upgrade pip setuptools wheel --break-system-packages
+        python -m pip install numpy matplotlib tqdm
 
     # --------------------
     # Windows dependencies (vcpkg + GLEW)
