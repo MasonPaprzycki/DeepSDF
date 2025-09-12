@@ -1,8 +1,9 @@
-name: CMake Build
+name: DeepSDF Build
 
 on:
   push:
   pull_request:
+  workflow_dispatch:  # optional manual trigger
 
 jobs:
   build:
@@ -12,41 +13,57 @@ jobs:
         os: [macos-latest, windows-latest]
 
     steps:
+    # --------------------
+    # Checkout repository
+    # --------------------
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
         submodules: true
 
+    # --------------------
     # macOS dependencies
-    - name: Install dependencies (macOS)
+    # --------------------
+    - name: Setup macOS dependencies
       if: runner.os == 'macOS'
       run: |
         brew update
         brew install glew zlib
-        python3 -m pip install --upgrade pip setuptools wheel
+        python3 -m venv venv
+        source venv/bin/activate
+        python -m pip install --upgrade pip setuptools wheel numpy
 
-    # Windows dependencies (via vcpkg)
-    - name: Install vcpkg
+    # --------------------
+    # Windows dependencies (vcpkg)
+    # --------------------
+    - name: Install vcpkg and GLEW on Windows
       if: runner.os == 'Windows'
       run: |
         git clone https://github.com/microsoft/vcpkg.git
         cd vcpkg
         bootstrap-vcpkg.bat
-
-    - name: Install GLEW via vcpkg
-      if: runner.os == 'Windows'
-      run: |
-        cd vcpkg
         vcpkg install glew:x64-windows
         echo "CMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" >> $GITHUB_ENV
 
+    # --------------------
+    # Set up CMake
+    # --------------------
     - name: Set up CMake
       uses: jwlawson/actions-setup-cmake@v1
 
+    # --------------------
+    # Configure CMake
+    # --------------------
     - name: Configure CMake
       run: |
+        if [ "${{ runner.os }}" == "macOS" ]; then
+          source venv/bin/activate
+        fi
         cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
               ${env:CMAKE_TOOLCHAIN_FILE:+-DCMAKE_TOOLCHAIN_FILE=${env:CMAKE_TOOLCHAIN_FILE}}
 
+    # --------------------
+    # Build
+    # --------------------
     - name: Build
       run: cmake --build build --config Release -- -j 2
