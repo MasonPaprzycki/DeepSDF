@@ -15,13 +15,29 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        submodules: true   # important if Pangolin/cnpy/zlib are submodules
+        submodules: true   # important for Pangolin/cnpy/zlib if you keep them as submodules
 
+    # ---- Dependencies ----
+    - name: Install dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew update
+        brew install glew zlib
+
+    - name: Install dependencies (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        choco install glew -y
+
+    # ---- CMake setup ----
     - name: Set up CMake
       uses: jwlawson/actions-setup-cmake@v1
 
     - name: Configure CMake
-      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      run: |
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DWITH_PANGOLIN=OFF
+        # ↑ turn OFF Pangolin if you don't need visualization in CI
+        # if you DO want it: just remove -DWITH_PANGOLIN=OFF
 
     - name: Build
       run: cmake --build build --config Release -- -j 2
