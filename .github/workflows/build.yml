@@ -63,6 +63,7 @@ jobs:
         else
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
                 ${env:CMAKE_TOOLCHAIN_FILE:+-DCMAKE_TOOLCHAIN_FILE=${env:CMAKE_TOOLCHAIN_FILE}}
+        fi
 
     # --------------------
     # Build
