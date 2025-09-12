@@ -3,7 +3,7 @@ name: DeepSDF Build
 on:
   push:
   pull_request:
-  workflow_dispatch:  # allows manual runs
+  workflow_dispatch:  # optional manual run
 
 jobs:
   build:
@@ -26,6 +26,7 @@ jobs:
     # --------------------
     - name: Setup macOS Python and dependencies
       if: runner.os == 'macOS'
+      shell: bash
       run: |
         brew update
         brew install glew zlib
@@ -38,11 +39,12 @@ jobs:
     # --------------------
     - name: Install vcpkg and GLEW on Windows
       if: runner.os == 'Windows'
+      shell: bash
       run: |
         git clone https://github.com/microsoft/vcpkg.git
         cd vcpkg
-        bootstrap-vcpkg.bat
-        vcpkg install glew:x64-windows
+        ./bootstrap-vcpkg.bash
+        ./vcpkg install glew:x64-windows
         echo "CMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" >> $GITHUB_ENV
 
     # --------------------
@@ -55,6 +57,7 @@ jobs:
     # Configure CMake
     # --------------------
     - name: Configure CMake
+      shell: bash
       run: |
         if [ "${{ runner.os }}" == "macOS" ]; then
           source venv/bin/activate
@@ -69,4 +72,5 @@ jobs:
     # Build
     # --------------------
     - name: Build
+      shell: bash
       run: cmake --build build --config Release -- -j 2
