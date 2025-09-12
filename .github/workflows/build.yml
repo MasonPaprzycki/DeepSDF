@@ -36,9 +36,12 @@ jobs:
         python3 -m venv venv
         source venv/bin/activate
 
-        # Upgrade pip and install Python packages inside venv
+        # Upgrade pip and install required packages inside venv
         python -m pip install --upgrade pip setuptools wheel --break-system-packages
         python -m pip install numpy matplotlib tqdm
+
+        # Prepend venv to PATH so ExternalProject sees venv Python
+        export PATH="$(pwd)/venv/bin:$PATH"
 
     # --------------------
     # Windows dependencies (vcpkg + GLEW)
@@ -67,12 +70,13 @@ jobs:
       run: |
         if [ "${{ runner.os }}" == "macOS" ]; then
           source venv/bin/activate
+          # PATH ensures ExternalProject/Pangolin sees venv Python
+          export PATH="$(pwd)/venv/bin:$PATH"
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
                 -DPYTHON_EXECUTABLE=$(which python)
         else
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
                 ${env:CMAKE_TOOLCHAIN_FILE:+-DCMAKE_TOOLCHAIN_FILE=${env:CMAKE_TOOLCHAIN_FILE}}
-        fi
 
     # --------------------
     # Build
