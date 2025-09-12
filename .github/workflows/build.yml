@@ -15,29 +15,44 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        submodules: true   # important for Pangolin/cnpy/zlib if you keep them as submodules
+        submodules: true
 
-    # ---- Dependencies ----
+    # --------------------
+    # macOS dependencies
+    # --------------------
     - name: Install dependencies (macOS)
       if: runner.os == 'macOS'
       run: |
         brew update
         brew install glew zlib
 
-    - name: Install dependencies (Windows)
+    # --------------------
+    # Windows dependencies (via vcpkg)
+    # --------------------
+    - name: Install vcpkg
       if: runner.os == 'Windows'
       run: |
-        choco install glew -y
+        git clone https://github.com/microsoft/vcpkg.git
+        cd vcpkg
+        bootstrap-vcpkg.bat
 
-    # ---- CMake setup ----
+    - name: Install GLEW via vcpkg
+      if: runner.os == 'Windows'
+      run: |
+        cd vcpkg
+        vcpkg install glew:x64-windows
+        echo "CMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" >> $GITHUB_ENV
+
+    # --------------------
+    # Set up CMake
+    # --------------------
     - name: Set up CMake
       uses: jwlawson/actions-setup-cmake@v1
 
     - name: Configure CMake
       run: |
-        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DWITH_PANGOLIN=OFF
-        # ↑ turn OFF Pangolin if you don't need visualization in CI
-        # if you DO want it: just remove -DWITH_PANGOLIN=OFF
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+              ${env:CMAKE_TOOLCHAIN_FILE:+-DCMAKE_TOOLCHAIN_FILE=${env:CMAKE_TOOLCHAIN_FILE}}
 
     - name: Build
       run: cmake --build build --config Release -- -j 2
