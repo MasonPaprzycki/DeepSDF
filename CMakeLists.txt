@@ -50,32 +50,20 @@ add_subdirectory(third-party/zlib/cnpy)
 add_dependencies(cnpy zlib_proj)
 
 
-
+# --- nanoflann ---
 include(FetchContent)
 
 FetchContent_Declare(
     nanoflann
-    GIT_REPOSITORY https://github.com/YourUsername/nanoflann.git
-    GIT_TAG v1.5.5  # or your branch/commit
+    GIT_REPOSITORY https://github.com/MasonPaprzycki/nanoflann
+    GIT_TAG master
 )
 
-FetchContent_GetProperties(nanoflann)
-if(NOT nanoflann_POPULATED)
-    # Populate the repository WITHOUT building it
-    FetchContent_Populate(
-        nanoflann
-        # Explicitly disable any attempt to build
-        SOURCE_DIR ${nanoflann_SOURCE_DIR}
-        BINARY_DIR ${nanoflann_BINARY_DIR}
-    )
-endif()
+FetchContent_Populate(nanoflann)
 
 # Create a header-only INTERFACE target
 add_library(nanoflann INTERFACE)
-
-# Set the include path to where your headers actually live
-target_include_directories(nanoflann INTERFACE ${nanoflann_SOURCE_DIR})
-
+target_include_directories(nanoflann INTERFACE ${nanoflann_SOURCE_DIR}/include)
 
 # --- Pangolin via ExternalProject ---
 option(WITH_PANGOLIN "Build with Pangolin (OpenGL visualization)" ON)
