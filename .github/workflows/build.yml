@@ -81,8 +81,11 @@ jobs:
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
-        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release `
-              ${env:CMAKE_TOOLCHAIN_FILE:+-DCMAKE_TOOLCHAIN_FILE=${env:CMAKE_TOOLCHAIN_FILE}}
+        $args = "-S . -B build -DCMAKE_BUILD_TYPE=Release"
+        if ($env:CMAKE_TOOLCHAIN_FILE) {
+          $args = "$args -DCMAKE_TOOLCHAIN_FILE=$env:CMAKE_TOOLCHAIN_FILE"
+        }
+        cmake $args
 
     # --------------------
     # Build
