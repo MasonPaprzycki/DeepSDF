@@ -29,7 +29,7 @@ FetchContent_Declare(
 FetchContent_Populate(eigen)
 add_subdirectory(${eigen_SOURCE_DIR} ${eigen_BINARY_DIR})
 
-# --- Cmake ---
+# --- zlib via ExternalProject ---
 ExternalProject_Add(
     zlib_proj
     PREFIX ${CMAKE_BINARY_DIR}/zlib
@@ -38,11 +38,10 @@ ExternalProject_Add(
     CMAKE_ARGS
         -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/zlib-install
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-        -DCMAKE_POLICY_VERSION_MINIMUM=3.5   # <---- add this
     UPDATE_COMMAND ""
 )
 
-
+# --- Pass zlib paths to cnpy ---
 set(ZLIB_INCLUDE_DIR "${CMAKE_BINARY_DIR}/zlib-install/include" CACHE PATH "ZLIB include")
 set(ZLIB_LIBRARY "${CMAKE_BINARY_DIR}/zlib-install/lib/zlibstatic.lib" CACHE FILEPATH "ZLIB lib")
 
@@ -50,19 +49,13 @@ set(ZLIB_LIBRARY "${CMAKE_BINARY_DIR}/zlib-install/lib/zlibstatic.lib" CACHE FIL
 add_subdirectory(third-party/zlib/cnpy)
 add_dependencies(cnpy zlib_proj)
 
-
 # --- nanoflann ---
-include(FetchContent)
-
 FetchContent_Declare(
     nanoflann
     GIT_REPOSITORY https://github.com/MasonPaprzycki/nanoflann
     GIT_TAG master
 )
-
 FetchContent_Populate(nanoflann)
-
-# Create a header-only INTERFACE target
 add_library(nanoflann INTERFACE)
 target_include_directories(nanoflann INTERFACE ${nanoflann_SOURCE_DIR}/include)
 
