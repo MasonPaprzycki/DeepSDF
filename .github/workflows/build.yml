@@ -59,13 +59,13 @@ jobs:
               "-DZLIB_LIBRARY=${{ github.workspace }}\build\zlib-install\lib\zlibstatic.lib" `
               -DCMAKE_VERBOSE_MAKEFILE=ON
 
-    # --------------------
-    # Build Pangolin first (sequentially)
-    # --------------------
     - name: Build Pangolin
       shell: pwsh
       run: |
+        # Ensure vcpkg toolchain is set for the ExternalProject
         cmake --build build --config Release --target pangolin_proj -- /m:1
+        # Force Pangolin to pick up GLEW from vcpkg
+        cmake --build build --config Release --target pangolin_proj -- /p:CMAKE_TOOLCHAIN_FILE="${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake"
 
     # --------------------
     # Build remaining DeepSDF targets
