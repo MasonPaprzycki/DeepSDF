@@ -18,6 +18,9 @@ jobs:
       with:
         submodules: true
 
+    # --------------------
+    # macOS setup (venv, setuptools, glew, zlib via Homebrew)
+    # --------------------
     - name: Setup macOS Python and dependencies
       if: runner.os == 'macOS'
       shell: bash
@@ -36,12 +39,16 @@ jobs:
 
         # compute python exe and site-packages dynamically
         PYTHON_EXE="$(pwd)/venv/bin/python"
-        PY_SITE="$($PYTHON_EXE -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')"
+        PY_SITE="$($PYTHON_EXE -c 'import sysconfig; print(sysconfig.get_paths()[\"purelib\"])')"
 
         # export variables for subsequent steps
         echo "PATH=$(pwd)/venv/bin:$PATH" >> $GITHUB_ENV
         echo "PYTHON_EXECUTABLE=$PYTHON_EXE" >> $GITHUB_ENV
         echo "PYTHONPATH=$PY_SITE" >> $GITHUB_ENV
+
+        # export Homebrew zlib to CMake
+        echo "ZLIB_INCLUDE_DIR=$(brew --prefix zlib)/include" >> $GITHUB_ENV
+        echo "ZLIB_LIBRARY=$(brew --prefix zlib)/lib/libz.dylib" >> $GITHUB_ENV
 
     # --------------------
     # Windows setup (vcpkg + GLEW + python deps)
@@ -54,8 +61,6 @@ jobs:
         cd vcpkg
         .\bootstrap-vcpkg.bat
         .\vcpkg install glew:x64-windows
-
-        # persist the toolchain file
         Add-Content -Path $env:GITHUB_ENV -Value "CMAKE_TOOLCHAIN_FILE=${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake"
 
     - name: Ensure Windows Python packages and export PY info
@@ -66,7 +71,6 @@ jobs:
         python -m pip install numpy matplotlib tqdm
 
         $pyExe = (Get-Command python).Source
-        # capture site-packages via python, PowerShell-friendly
         $pySite = & python -c "import sysconfig; print(sysconfig.get_paths()['purelib'])"
         Add-Content -Path $env:GITHUB_ENV -Value "PYTHON_EXECUTABLE=$pyExe"
         Add-Content -Path $env:GITHUB_ENV -Value "PYTHONPATH=$pySite"
@@ -78,37 +82,20 @@ jobs:
       uses: jwlawson/actions-setup-cmake@v1
 
     # --------------------
-    # Configure CMake (macOS)
+    # Configure CMake
     # --------------------
-    - name: Configure CMake (macOS)
-      if: runner.os == 'macOS'
+    - name: Configure CMake
       shell: bash
       run: |
         set -euo pipefail
         cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
               -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} \
+              ${ZLIB_INCLUDE_DIR:+-DZLIB_INCLUDE_DIR=$ZLIB_INCLUDE_DIR} \
+              ${ZLIB_LIBRARY:+-DZLIB_LIBRARY=$ZLIB_LIBRARY} \
               -DCMAKE_VERBOSE_MAKEFILE=ON
 
-    - name: Configure CMake (Windows)
-      if: runner.os == 'Windows'
-      shell: pwsh
-      run: |
-        $args = @(
-          "-S", ".",
-          "-B", "build",
-          "-DCMAKE_BUILD_TYPE=Release",
-          "-DCMAKE_VERBOSE_MAKEFILE=ON"
-        )
-        if ($env:CMAKE_TOOLCHAIN_FILE) {
-          $args += "-DCMAKE_TOOLCHAIN_FILE=$env:CMAKE_TOOLCHAIN_FILE"
-        }
-        if ($env:PYTHON_EXECUTABLE) {
-          $args += "-DPYTHON_EXECUTABLE=$env:PYTHON_EXECUTABLE"
-        }
-        cmake @args
-
     # --------------------
-    # Build Pangolin first (isolate failures)
+    # Build Pangolin first
     # --------------------
     - name: Build Pangolin (macOS)
       if: runner.os == 'macOS'
