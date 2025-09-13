@@ -41,13 +41,12 @@ jobs:
         echo "PYTHONPATH=$pySite" >> $env:GITHUB_ENV
 
     # --------------------
-    # Configure DeepSDF CMake
+    # Configure CMake (main project)
     # --------------------
     - name: Configure CMake
       shell: pwsh
       run: |
         $ErrorActionPreference = "Stop"
-
         $vcpkgToolchain = "${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake"
 
         cmake -S . -B build -DCMAKE_BUILD_TYPE=Release `
@@ -58,25 +57,15 @@ jobs:
               -DCMAKE_VERBOSE_MAKEFILE=ON
 
     # --------------------
-    # Build Pangolin with vcpkg GLEW
+    # Build Pangolin via ExternalProject_Add
     # --------------------
     - name: Build Pangolin
       shell: pwsh
       run: |
-        $ErrorActionPreference = "Stop"
-        $vcpkgToolchain = "${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake"
-
-        cmake -S third-party/pangolin -B build/pangolin `
-              -DCMAKE_BUILD_TYPE=Release `
-              -DCMAKE_TOOLCHAIN_FILE=$vcpkgToolchain `
-              -DPANGOLIN_USE_GLEW=ON `
-              -DPANGOLIN_BUILD_EXAMPLES=OFF `
-              -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}\build\pangolin-install"
-
-        cmake --build build/pangolin --config Release --target install
+        cmake --build build --config Release --target pangolin_proj
 
     # --------------------
-    # Build DeepSDF targets
+    # Build DeepSDF executables
     # --------------------
     - name: Build DeepSDF targets
       shell: pwsh
