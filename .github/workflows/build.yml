@@ -7,10 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [windows-latest]
+    runs-on: windows-latest
 
     steps:
     - name: Checkout repository
@@ -18,12 +15,10 @@ jobs:
       with:
         submodules: true
 
-
     # --------------------
-    # Windows setup (vcpkg + GLEW + python deps)
+    # Install vcpkg and GLEW
     # --------------------
-    - name: Install vcpkg and GLEW on Windows
-      if: runner.os == 'Windows'
+    - name: Install vcpkg and GLEW
       shell: pwsh
       run: |
         git clone https://github.com/microsoft/vcpkg.git
@@ -32,8 +27,10 @@ jobs:
         .\vcpkg install glew:x64-windows
         Add-Content -Path $env:GITHUB_ENV -Value "CMAKE_TOOLCHAIN_FILE=${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake"
 
-    - name: Ensure Windows Python packages and export PY info
-      if: runner.os == 'Windows'
+    # --------------------
+    # Install Python dependencies
+    # --------------------
+    - name: Install Python packages
       shell: pwsh
       run: |
         python -m pip install --upgrade pip setuptools wheel
@@ -45,36 +42,31 @@ jobs:
         Add-Content -Path $env:GITHUB_ENV -Value "PYTHONPATH=$pySite"
 
     # --------------------
-    # Set up CMake
-    # --------------------
-    - name: Set up CMake
-      uses: jwlawson/actions-setup-cmake@v1
-
-    # --------------------
     # Configure CMake
     # --------------------
     - name: Configure CMake
-      shell: bash
+      shell: pwsh
       run: |
-        set -euo pipefail
-        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
-              -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} \
-              ${ZLIB_INCLUDE_DIR:+-DZLIB_INCLUDE_DIR=$ZLIB_INCLUDE_DIR} \
-              ${ZLIB_LIBRARY:+-DZLIB_LIBRARY=$ZLIB_LIBRARY} \
+        $ErrorActionPreference = "Stop"
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release `
+              -DCMAKE_TOOLCHAIN_FILE=$env:CMAKE_TOOLCHAIN_FILE `
+              -DPYTHON_EXECUTABLE=$env:PYTHON_EXECUTABLE `
+              -DZLIB_INCLUDE_DIR=$env:GITHUB_WORKSPACE\build\zlib-install\include `
+              -DZLIB_LIBRARY=$env:GITHUB_WORKSPACE\build\zlib-install\lib\zlibstatic.lib `
               -DCMAKE_VERBOSE_MAKEFILE=ON
 
     # --------------------
     # Build Pangolin first
     # --------------------
-    - name: Build Pangolin (Windows)
-      if: runner.os == 'Windows'
+    - name: Build Pangolin
       shell: pwsh
       run: |
         cmake --build build --config Release --target pangolin_proj
 
-    
-    - name: Build remaining targets (Windows)
-      if: runner.os == 'Windows'
+    # --------------------
+    # Build remaining targets
+    # --------------------
+    - name: Build DeepSDF targets
       shell: pwsh
       run: |
         cmake --build build --config Release
