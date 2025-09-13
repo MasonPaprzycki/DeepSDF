@@ -40,22 +40,21 @@ jobs:
         echo "PYTHON_EXECUTABLE=$pyExe" >> $env:GITHUB_ENV
         echo "PYTHONPATH=$pySite" >> $env:GITHUB_ENV
 
-    # --------------------
-    # Configure CMake
-    # --------------------
+
     - name: Configure CMake
       shell: pwsh
       run: |
         $ErrorActionPreference = "Stop"
 
-        # Set toolchain path for vcpkg
+        # Full path to vcpkg toolchain
         $vcpkgToolchain = "${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake"
 
+        # Configure CMake
         cmake -S . -B build -DCMAKE_BUILD_TYPE=Release `
-              -DCMAKE_TOOLCHAIN_FILE=$vcpkgToolchain `
-              -DPYTHON_EXECUTABLE=$env:PYTHON_EXECUTABLE `
-              -DZLIB_INCLUDE_DIR=${{ github.workspace }}\build\zlib-install\include `
-              -DZLIB_LIBRARY=${{ github.workspace }}\build\zlib-install\lib\zlibstatic.lib `
+              "-DCMAKE_TOOLCHAIN_FILE=$vcpkgToolchain" `
+              "-DPYTHON_EXECUTABLE=$env:PYTHON_EXECUTABLE" `
+              "-DZLIB_INCLUDE_DIR=${{ github.workspace }}\build\zlib-install\include" `
+              "-DZLIB_LIBRARY=${{ github.workspace }}\build\zlib-install\lib\zlibstatic.lib" `
               -DCMAKE_VERBOSE_MAKEFILE=ON
 
     # --------------------
