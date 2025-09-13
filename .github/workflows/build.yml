@@ -25,10 +25,9 @@ jobs:
         cd vcpkg
         .\bootstrap-vcpkg.bat
         .\vcpkg install glew:x64-windows
-        Add-Content -Path $env:GITHUB_ENV -Value "CMAKE_TOOLCHAIN_FILE=${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake"
 
     # --------------------
-    # Install Python dependencies
+    # Install Python packages
     # --------------------
     - name: Install Python packages
       shell: pwsh
@@ -38,8 +37,8 @@ jobs:
 
         $pyExe = (Get-Command python).Source
         $pySite = & python -c "import sysconfig; print(sysconfig.get_paths()['purelib'])"
-        Add-Content -Path $env:GITHUB_ENV -Value "PYTHON_EXECUTABLE=$pyExe"
-        Add-Content -Path $env:GITHUB_ENV -Value "PYTHONPATH=$pySite"
+        echo "PYTHON_EXECUTABLE=$pyExe" >> $env:GITHUB_ENV
+        echo "PYTHONPATH=$pySite" >> $env:GITHUB_ENV
 
     # --------------------
     # Configure CMake
@@ -48,11 +47,15 @@ jobs:
       shell: pwsh
       run: |
         $ErrorActionPreference = "Stop"
+
+        # Set toolchain path for vcpkg
+        $vcpkgToolchain = "${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake"
+
         cmake -S . -B build -DCMAKE_BUILD_TYPE=Release `
-              -DCMAKE_TOOLCHAIN_FILE=$env:CMAKE_TOOLCHAIN_FILE `
+              -DCMAKE_TOOLCHAIN_FILE=$vcpkgToolchain `
               -DPYTHON_EXECUTABLE=$env:PYTHON_EXECUTABLE `
-              -DZLIB_INCLUDE_DIR=$env:GITHUB_WORKSPACE\build\zlib-install\include `
-              -DZLIB_LIBRARY=$env:GITHUB_WORKSPACE\build\zlib-install\lib\zlibstatic.lib `
+              -DZLIB_INCLUDE_DIR=${{ github.workspace }}\build\zlib-install\include `
+              -DZLIB_LIBRARY=${{ github.workspace }}\build\zlib-install\lib\zlibstatic.lib `
               -DCMAKE_VERBOSE_MAKEFILE=ON
 
     # --------------------
