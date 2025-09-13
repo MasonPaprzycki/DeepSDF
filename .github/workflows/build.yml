@@ -89,21 +89,23 @@ jobs:
               -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} \
               -DCMAKE_VERBOSE_MAKEFILE=ON
 
-    # --------------------
-    # Configure CMake (Windows)
-    # --------------------
     - name: Configure CMake (Windows)
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
-        $args = "-S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE=ON"
+        $args = @(
+          "-S", ".",
+          "-B", "build",
+          "-DCMAKE_BUILD_TYPE=Release",
+          "-DCMAKE_VERBOSE_MAKEFILE=ON"
+        )
         if ($env:CMAKE_TOOLCHAIN_FILE) {
-          $args = "$args -DCMAKE_TOOLCHAIN_FILE=$env:CMAKE_TOOLCHAIN_FILE"
+          $args += "-DCMAKE_TOOLCHAIN_FILE=$env:CMAKE_TOOLCHAIN_FILE"
         }
         if ($env:PYTHON_EXECUTABLE) {
-          $args = "$args -DPYTHON_EXECUTABLE=$env:PYTHON_EXECUTABLE"
+          $args += "-DPYTHON_EXECUTABLE=$env:PYTHON_EXECUTABLE"
         }
-        cmake $args
+        cmake @args
 
     # --------------------
     # Build Pangolin first (isolate failures)
