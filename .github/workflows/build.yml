@@ -10,7 +10,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest, windows-latest]
+        os: [windows-latest]
 
     steps:
     - name: Checkout repository
@@ -18,37 +18,6 @@ jobs:
       with:
         submodules: true
 
-    # --------------------
-    # macOS setup (venv, setuptools, glew, zlib via Homebrew)
-    # --------------------
-    - name: Setup macOS Python and dependencies
-      if: runner.os == 'macOS'
-      shell: bash
-      run: |
-        set -euo pipefail
-
-        # Homebrew deps
-        brew update
-        brew install glew zlib
-
-        # create venv and install python packages inside it
-        python3 -m venv venv
-        source venv/bin/activate
-        python -m pip install --upgrade pip setuptools wheel
-        python -m pip install numpy matplotlib tqdm
-
-        # compute python exe and site-packages dynamically
-        PYTHON_EXE="$(pwd)/venv/bin/python"
-        PY_SITE="$($PYTHON_EXE -c 'import sysconfig; print(sysconfig.get_paths()[\"purelib\"])')"
-
-        # export variables for subsequent steps
-        echo "PATH=$(pwd)/venv/bin:$PATH" >> $GITHUB_ENV
-        echo "PYTHON_EXECUTABLE=$PYTHON_EXE" >> $GITHUB_ENV
-        echo "PYTHONPATH=$PY_SITE" >> $GITHUB_ENV
-
-        # export Homebrew zlib to CMake
-        echo "ZLIB_INCLUDE_DIR=$(brew --prefix zlib)/include" >> $GITHUB_ENV
-        echo "ZLIB_LIBRARY=$(brew --prefix zlib)/lib/libz.dylib" >> $GITHUB_ENV
 
     # --------------------
     # Windows setup (vcpkg + GLEW + python deps)
@@ -97,29 +66,13 @@ jobs:
     # --------------------
     # Build Pangolin first
     # --------------------
-    - name: Build Pangolin (macOS)
-      if: runner.os == 'macOS'
-      shell: bash
-      run: |
-        set -euo pipefail
-        cmake --build build --config Release --target pangolin_proj -- -j 2 VERBOSE=1
-
     - name: Build Pangolin (Windows)
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
         cmake --build build --config Release --target pangolin_proj
 
-    # --------------------
-    # Build remaining targets (verbose)
-    # --------------------
-    - name: Build remaining targets (macOS)
-      if: runner.os == 'macOS'
-      shell: bash
-      run: |
-        set -euo pipefail
-        cmake --build build --config Release -- -j 2 VERBOSE=1
-
+    
     - name: Build remaining targets (Windows)
       if: runner.os == 'Windows'
       shell: pwsh
