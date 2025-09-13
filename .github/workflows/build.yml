@@ -22,29 +22,28 @@ jobs:
         submodules: true
 
     # --------------------
-    # macOS dependencies
+    # macOS setup
     # --------------------
     - name: Setup macOS Python and dependencies
       if: runner.os == 'macOS'
       shell: bash
       run: |
-        # Install brew dependencies
         brew update
         brew install glew zlib
 
-        # Create and activate Python virtual environment
+        # Create isolated virtual environment
         python3 -m venv venv
         source venv/bin/activate
 
-        # Upgrade pip and install required Python packages inside venv
-        python -m pip install --upgrade pip setuptools wheel --break-system-packages
-        python -m pip install numpy matplotlib tqdm
+        # Install required Python packages inside venv
+        python -m pip install --upgrade pip setuptools wheel numpy matplotlib tqdm
 
-        # Prepend venv to PATH so ExternalProject sees venv Python
-        export PATH="$(pwd)/venv/bin:$PATH"
+        # Persist environment so all later steps use venv Python
+        echo "PATH=$(pwd)/venv/bin:$PATH" >> $GITHUB_ENV
+        echo "PYTHON_EXECUTABLE=$(pwd)/venv/bin/python" >> $GITHUB_ENV
 
     # --------------------
-    # Windows dependencies (vcpkg + GLEW)
+    # Windows setup
     # --------------------
     - name: Install vcpkg and GLEW on Windows
       if: runner.os == 'Windows'
@@ -54,7 +53,16 @@ jobs:
         cd vcpkg
         .\bootstrap-vcpkg.bat
         .\vcpkg install glew:x64-windows
+
+        # Persist toolchain for later CMake configure
         echo "CMAKE_TOOLCHAIN_FILE=${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake" >> $env:GITHUB_ENV
+
+    - name: Ensure Windows Python packages
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        python -m pip install --upgrade pip setuptools wheel numpy matplotlib tqdm
+        echo "PYTHON_EXECUTABLE=$(Get-Command python | Select-Object -ExpandProperty Source)" >> $env:GITHUB_ENV
 
     # --------------------
     # Set up CMake
@@ -69,10 +77,8 @@ jobs:
       if: runner.os == 'macOS'
       shell: bash
       run: |
-        source venv/bin/activate
-        export PATH="$(pwd)/venv/bin:$PATH"
         cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
-              -DPYTHON_EXECUTABLE=$(which python)
+              -DPYTHON_EXECUTABLE=$PYTHON_EXECUTABLE
 
     # --------------------
     # Configure CMake (Windows)
@@ -84,6 +90,9 @@ jobs:
         $args = "-S . -B build -DCMAKE_BUILD_TYPE=Release"
         if ($env:CMAKE_TOOLCHAIN_FILE) {
           $args = "$args -DCMAKE_TOOLCHAIN_FILE=$env:CMAKE_TOOLCHAIN_FILE"
+        }
+        if ($env:PYTHON_EXECUTABLE) {
+          $args = "$args -DPYTHON_EXECUTABLE=$env:PYTHON_EXECUTABLE"
         }
         cmake $args
 
