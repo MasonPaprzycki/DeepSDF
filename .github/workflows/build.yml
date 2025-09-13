@@ -18,9 +18,6 @@ jobs:
       with:
         submodules: true
 
-    # --------------------
-    # macOS setup (venv, setuptools, glew, zlib)
-    # --------------------
     - name: Setup macOS Python and dependencies
       if: runner.os == 'macOS'
       shell: bash
@@ -37,9 +34,9 @@ jobs:
         python -m pip install --upgrade pip setuptools wheel
         python -m pip install numpy matplotlib tqdm
 
-        # compute python exe and site-packages dynamically (stable quoting)
+        # compute python exe and site-packages dynamically
         PYTHON_EXE="$(pwd)/venv/bin/python"
-        PY_SITE="$($PYTHON_EXE -c 'import sysconfig; print(sysconfig.get_paths()[\"purelib\"])')"
+        PY_SITE="$($PYTHON_EXE -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')"
 
         # export variables for subsequent steps
         echo "PATH=$(pwd)/venv/bin:$PATH" >> $GITHUB_ENV
